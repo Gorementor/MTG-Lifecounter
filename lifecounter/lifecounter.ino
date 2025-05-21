@@ -1,7 +1,7 @@
 #include <M5Unified.h>
 
 // TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
-// TODO: fade-out for delta
+// TODO: 5 * inc / dec if touch zone is hold for 1 sec
 
 // Constants
 const int BRIGHTNESS_FULL = 80;
@@ -62,20 +62,24 @@ void loop() {
   bool inputDetected = false;
 
   if (M5.BtnA.pressedFor(1000)) {
-    lifeTotal = 20;
-    accumulatedDelta = 0;
-    clearDeltaDisplay();
-    drawLife();
-    drawBattery();
+    if (lifeTotal != 20) {
+      lifeTotal = 20;
+      accumulatedDelta = 0;
+      clearDeltaDisplay();
+      drawLife();
+      drawBattery();
+    }
     inputDetected = true;
   }
 
   if (M5.BtnC.pressedFor(1000)) {
-    lifeTotal = 40;
-    accumulatedDelta = 0;
-    clearDeltaDisplay();
-    drawLife();
-    drawBattery();
+    if (lifeTotal != 40) {
+      lifeTotal = 40;
+      accumulatedDelta = 0;
+      clearDeltaDisplay();
+      drawLife();
+      drawBattery();
+    }
     inputDetected = true;
   }
 
