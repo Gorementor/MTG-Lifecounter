@@ -1,4 +1,4 @@
-#include <M5Core2.h>
+#include <M5Unified.h>
 
 // TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
 // TODO: fade-out for delta
@@ -29,23 +29,24 @@ bool isDimmed = false;
 
 // Dimensions
 const int lifeTextSize = 8;
-
 int lifeX, lifeY, lifeWidth, lifeHeight;
 int deltaX;
 
 void setup() {
-  M5.begin();
-  M5.Lcd.setRotation(1);  // Portrait
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.setTextSize(2);
+  auto cfg = M5.config();
+  M5.begin(cfg);
+
+  M5.Display.setRotation(1);  // Portrait
+  M5.Display.fillScreen(BLACK);
+  M5.Display.setTextColor(WHITE);
+  M5.Display.setTextSize(2);
 
   // Calculate layout
   lifeWidth = lifeTextSize * 6 * 3;
   lifeHeight = lifeTextSize * 8;
-  lifeX = (M5.Lcd.width() - lifeWidth) / 2;
-  lifeY = (M5.Lcd.height() - lifeHeight) / 2;
-  deltaX = (M5.Lcd.width() - deltaWidth) / 2;
+  lifeX = (M5.Display.width() - lifeWidth) / 2;
+  lifeY = (M5.Display.height() - lifeHeight) / 2;
+  deltaX = (M5.Display.width() - deltaWidth) / 2;
 
   lastInputTime = millis();
   setBrightness(BRIGHTNESS_FULL);
@@ -78,13 +79,13 @@ void loop() {
     inputDetected = true;
   }
 
-  TouchPoint_t touch = M5.Touch.getPressPoint();
+  auto touch = M5.Touch.getDetail();
   static unsigned long lastTouchTime = 0;
   static bool touchHeld = false;
 
-  if (touch.x != -1 && touch.y != -1) {
+  if (touch.isPressed()) {
     int buttonStripHeight = 35;
-    int activeHeight = M5.Lcd.height() - buttonStripHeight;
+    int activeHeight = M5.Display.height() - buttonStripHeight;
 
     if (!touchHeld || (millis() - lastTouchTime > repeatInterval)) {
       int prev = lifeTotal;
@@ -132,16 +133,16 @@ void loop() {
 }
 
 void drawLife() {
-  M5.Lcd.fillRect(lifeX - 5, lifeY - 5, lifeWidth + 10, lifeHeight + 10, BLACK);
+  M5.Display.fillRect(lifeX - 5, lifeY - 5, lifeWidth + 10, lifeHeight + 10, BLACK);
 
   String text = String(lifeTotal);
   int textW = text.length() * 6 * lifeTextSize;
   int textX = lifeX + (lifeWidth - textW) / 2;
 
-  M5.Lcd.setTextSize(lifeTextSize);
-  M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.setCursor(textX, lifeY);
-  M5.Lcd.print(text);
+  M5.Display.setTextSize(lifeTextSize);
+  M5.Display.setTextColor(WHITE);
+  M5.Display.setCursor(textX, lifeY);
+  M5.Display.print(text);
 
   lastLifeTotal = lifeTotal;
 }
@@ -150,52 +151,49 @@ void drawDelta(int delta) {
   int yAbove = lifeY - deltaHeight - 20;
   int yBelow = lifeY + lifeHeight + 10;
 
-  // Format with sign manually to avoid Print issues
   String deltaStr = (delta > 0 ? "+" : "-") + String(abs(delta));
-
   int textW = deltaStr.length() * 6 * deltaTextSize;
   int textX = deltaX + (deltaWidth - textW) / 2;
 
-  // Clear both delta areas first
   clearDeltaDisplay();
 
-  M5.Lcd.setTextSize(deltaTextSize);
-  M5.Lcd.setTextColor(WHITE, BLACK);
-  M5.Lcd.setCursor(textX, (delta > 0 ? yAbove : yBelow));
-  M5.Lcd.print(deltaStr);
+  M5.Display.setTextSize(deltaTextSize);
+  M5.Display.setTextColor(WHITE, BLACK);
+  M5.Display.setCursor(textX, (delta > 0 ? yAbove : yBelow));
+  M5.Display.print(deltaStr);
 }
 
 void clearDeltaDisplay() {
   int yAbove = lifeY - deltaHeight - 20;
   int yBelow = lifeY + lifeHeight + 10;
-  M5.Lcd.fillRect(deltaX - 5, yAbove - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
-  M5.Lcd.fillRect(deltaX - 5, yBelow - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
+  M5.Display.fillRect(deltaX - 5, yAbove - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
+  M5.Display.fillRect(deltaX - 5, yBelow - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
 }
 
 void drawBattery() {
-  float voltage = M5.Axp.GetBatVoltage();
+  float voltage = M5.Power.getBatteryVoltage();
   int percent = voltageToPercent(voltage);
-  bool isCharging = M5.Axp.isCharging() && M5.Axp.isVBUS();
+  bool isCharging = M5.Power.isCharging();
 
   if (percent == lastBatteryPercent && isCharging == lastCharging) return;
 
-  M5.Lcd.fillRect(0, 0, 120, 20, BLACK);
+  M5.Display.fillRect(0, 0, 120, 20, BLACK);
 
   int level = map(percent, 0, 100, 0, 16);
   uint16_t color = (percent > 10) ? GREEN : RED;
 
-  M5.Lcd.drawRect(5, 5, 20, 10, WHITE);
-  M5.Lcd.fillRect(25, 8, 2, 4, WHITE);
-  M5.Lcd.fillRect(7, 7, level, 6, color);
+  M5.Display.drawRect(5, 5, 20, 10, WHITE);
+  M5.Display.fillRect(25, 8, 2, 4, WHITE);
+  M5.Display.fillRect(7, 7, level, 6, color);
 
-  M5.Lcd.setCursor(30, 5);
-  M5.Lcd.setTextSize(1);
-  M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.printf("%d%%", percent);
+  M5.Display.setCursor(30, 5);
+  M5.Display.setTextSize(1);
+  M5.Display.setTextColor(WHITE);
+  M5.Display.printf("%d%%", percent);
 
   if (isCharging) {
-    M5.Lcd.setCursor(70, 5);
-    M5.Lcd.print("CHG");
+    M5.Display.setCursor(70, 5);
+    M5.Display.print("CHG");
   }
 
   lastBatteryPercent = percent;
@@ -209,5 +207,5 @@ int voltageToPercent(float voltage) {
 
 void setBrightness(int percent) {
   percent = constrain(percent, 0, 100);
-  M5.Axp.ScreenBreath(percent);  // Sets actual backlight voltage
+  M5.Display.setBrightness(percent);
 }
