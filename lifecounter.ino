@@ -3,6 +3,7 @@
 // TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
 // TODO: reset life totals only after btnA or btnC is pressed for 3 seconds
 // TODO: fade-out for deltas
+// TODO: Reset by long press (BtnA/C)
 
 // Constants
 const int BRIGHTNESS_FULL = 100;
