@@ -1,9 +1,7 @@
 #include <M5Core2.h>
 
 // TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
-// TODO: reset life totals only after btnA or btnC is pressed for 3 seconds
-// TODO: fade-out for deltas
-// TODO: Reset by long press (BtnA/C)
+// TODO: fade-out for delta
 
 // Constants
 const int BRIGHTNESS_FULL = 100;
@@ -62,7 +60,7 @@ void loop() {
 
   bool inputDetected = false;
 
-  if (M5.BtnA.wasPressed()) {
+  if (M5.BtnA.pressedFor(1000)) {
     lifeTotal = 20;
     accumulatedDelta = 0;
     clearDeltaDisplay();
@@ -71,7 +69,7 @@ void loop() {
     inputDetected = true;
   }
 
-  if (M5.BtnC.wasPressed()) {
+  if (M5.BtnC.pressedFor(1000)) {
     lifeTotal = 40;
     accumulatedDelta = 0;
     clearDeltaDisplay();
