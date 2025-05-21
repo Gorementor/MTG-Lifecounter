@@ -1,7 +1,6 @@
 #include <M5Unified.h>
 
 // TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
-// TODO: 5 * inc / dec if touch zone is hold for 1 sec
 
 // Constants
 const int BRIGHTNESS_FULL = 80;
@@ -33,7 +32,7 @@ int lifeX, lifeY, lifeWidth, lifeHeight;
 int deltaX;
 
 void setup() {
-  auto cfg = M5.config();
+  auto cfg = M5.config();  // Use default config (auto-detect device type)
   M5.begin(cfg);
 
   M5.Display.setRotation(1);  // Portrait
@@ -61,6 +60,7 @@ void loop() {
 
   bool inputDetected = false;
 
+  // Button A: Reset to 20
   if (M5.BtnA.pressedFor(1000)) {
     if (lifeTotal != 20) {
       lifeTotal = 20;
@@ -72,6 +72,7 @@ void loop() {
     inputDetected = true;
   }
 
+  // Button C: Reset to 40
   if (M5.BtnC.pressedFor(1000)) {
     if (lifeTotal != 40) {
       lifeTotal = 40;
@@ -83,25 +84,66 @@ void loop() {
     inputDetected = true;
   }
 
+  // Touch handling
   auto touch = M5.Touch.getDetail();
+  static bool touchActive = false;
+  static unsigned long touchStartTime = 0;
   static unsigned long lastTouchTime = 0;
-  static bool touchHeld = false;
+  static bool longPressTriggered = false;
 
   if (touch.isPressed()) {
+    if (!touchActive) {
+      touchActive = true;
+      touchStartTime = millis();
+      longPressTriggered = false;
+    }
+
+    unsigned long heldTime = millis() - touchStartTime;
     int buttonStripHeight = 35;
     int activeHeight = M5.Display.height() - buttonStripHeight;
 
-    if (!touchHeld || (millis() - lastTouchTime > repeatInterval)) {
+    if (heldTime >= 1000) {
+      if (!longPressTriggered || (millis() - lastTouchTime > repeatInterval)) {
+        int prev = lifeTotal;
+        int delta = 0;
+
+        if (touch.y < activeHeight / 2) {
+          delta = min(5, MAX_LIFE - lifeTotal);
+        } else if (touch.y < activeHeight) {
+          delta = -min(5, lifeTotal - MIN_LIFE);
+        }
+
+        if (delta != 0) {
+          lifeTotal += delta;
+          accumulatedDelta += delta;
+          lastDeltaUpdateTime = millis();
+          drawLife();
+          drawDelta(accumulatedDelta);
+          drawBattery();
+        }
+
+        lastTouchTime = millis();
+        longPressTriggered = true;
+        inputDetected = true;
+      }
+    }
+
+  } else if (touchActive) {
+    // Touch released before long press threshold → short press
+    if (!longPressTriggered) {
       int prev = lifeTotal;
+      int delta = 0;
+      int buttonStripHeight = 35;
+      int activeHeight = M5.Display.height() - buttonStripHeight;
 
       if (touch.y < activeHeight / 2) {
-        if (lifeTotal < MAX_LIFE) lifeTotal++;
+        delta = min(1, MAX_LIFE - lifeTotal);
       } else if (touch.y < activeHeight) {
-        if (lifeTotal > MIN_LIFE) lifeTotal--;
+        delta = -min(1, lifeTotal - MIN_LIFE);
       }
 
-      int delta = lifeTotal - prev;
       if (delta != 0) {
+        lifeTotal += delta;
         accumulatedDelta += delta;
         lastDeltaUpdateTime = millis();
         drawLife();
@@ -109,19 +151,20 @@ void loop() {
         drawBattery();
       }
 
-      lastTouchTime = millis();
-      touchHeld = true;
       inputDetected = true;
     }
-  } else {
-    touchHeld = false;
+
+    // Reset touch state
+    touchActive = false;
   }
 
+  // Clear delta display after timeout
   if (accumulatedDelta != 0 && (millis() - lastDeltaUpdateTime > deltaTimeout)) {
     clearDeltaDisplay();
     accumulatedDelta = 0;
   }
 
+  // Brightness auto-dim
   if (inputDetected) {
     lastInputTime = millis();
     if (isDimmed) {
