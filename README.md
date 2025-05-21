@@ -39,8 +39,6 @@ A responsive, low-power life counter for tabletop games like Magic: The Gatherin
 ## TODO
 
 - 2-player split screen mode (toggle with Button B)
-- Long-press reset confirmation prompt
-- Save user preferences to EEPROM
 
 ---
 
