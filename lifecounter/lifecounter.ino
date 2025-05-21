@@ -4,8 +4,8 @@
 // TODO: fade-out for delta
 
 // Constants
-const int BRIGHTNESS_FULL = 100;
-const int BRIGHTNESS_DIM = 30;
+const int BRIGHTNESS_FULL = 80;
+const int BRIGHTNESS_DIM = 10;
 const int MIN_LIFE = 0;
 const int MAX_LIFE = 999;
 const int repeatInterval = 400;
