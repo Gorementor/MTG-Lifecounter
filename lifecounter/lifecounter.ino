@@ -1,7 +1,5 @@
 #include <M5Unified.h>
 
-// TODO: switch between split screen 2player mode / 1 player mode  if btnB pressed
-
 // Constants
 const int BRIGHTNESS_FULL = 80;
 const int BRIGHTNESS_DIM = 10;
@@ -15,24 +13,31 @@ const unsigned long deltaTimeout = 500;
 const unsigned long dimTimeout = 5000;  // 5 seconds
 
 // State
-int lifeTotal = 20;
-int lastLifeTotal = -1;
-int accumulatedDelta = 0;
+bool twoPlayerMode = false;
 
-unsigned long lastDeltaUpdateTime = 0;
+int lifeTotal1 = 20;
+int lifeTotal2 = 20;
+int lastLifeTotal1 = -1;
+int lastLifeTotal2 = -1;
+
+int accumulatedDelta1 = 0;
+int accumulatedDelta2 = 0;
+unsigned long lastDeltaUpdateTime1 = 0;
+unsigned long lastDeltaUpdateTime2 = 0;
+
 unsigned long lastInputTime = 0;
-
 int lastBatteryPercent = -1;
 bool lastCharging = false;
 bool isDimmed = false;
 
 // Dimensions
-const int lifeTextSize = 8;
-int lifeX, lifeY, lifeWidth, lifeHeight;
-int deltaX;
+const int lifeTextSize = 6;
+int lifeWidth, lifeHeight;
+int lifeY;
+int deltaX1, deltaX2;
 
 void setup() {
-  auto cfg = M5.config();  // Use default config (auto-detect device type)
+  auto cfg = M5.config();
   M5.begin(cfg);
 
   M5.Display.setRotation(1);  // Portrait
@@ -40,51 +45,60 @@ void setup() {
   M5.Display.setTextColor(WHITE);
   M5.Display.setTextSize(2);
 
-  // Calculate layout
+  // Layout
   lifeWidth = lifeTextSize * 6 * 3;
   lifeHeight = lifeTextSize * 8;
-  lifeX = (M5.Display.width() - lifeWidth) / 2;
   lifeY = (M5.Display.height() - lifeHeight) / 2;
-  deltaX = (M5.Display.width() - deltaWidth) / 2;
+  deltaX1 = (M5.Display.width() / 4) - (deltaWidth / 2);
+  deltaX2 = (3 * M5.Display.width() / 4) - (deltaWidth / 2);
 
   lastInputTime = millis();
   setBrightness(BRIGHTNESS_FULL);
 
-  drawLife();
-  clearDeltaDisplay();
-  drawBattery();
+  drawAll();
 }
 
 void loop() {
   M5.update();
-
   bool inputDetected = false;
 
-  // Button A: Reset to 20
+  // Button A: Reset Player 1
   if (M5.BtnA.pressedFor(1000)) {
-    if (lifeTotal != 20) {
-      lifeTotal = 20;
-      accumulatedDelta = 0;
-      clearDeltaDisplay();
-      drawLife();
-      drawBattery();
+    if (lifeTotal1 != 20) {
+      lifeTotal1 = 20;
+      accumulatedDelta1 = 0;
+      drawAll();
     }
     inputDetected = true;
   }
 
-  // Button C: Reset to 40
+  // Button C: Reset Player 2 (or to 40 in 1P mode)
   if (M5.BtnC.pressedFor(1000)) {
-    if (lifeTotal != 40) {
-      lifeTotal = 40;
-      accumulatedDelta = 0;
-      clearDeltaDisplay();
-      drawLife();
-      drawBattery();
+    if (twoPlayerMode) {
+      if (lifeTotal2 != 20) {
+        lifeTotal2 = 20;
+        accumulatedDelta2 = 0;
+        drawAll();
+      }
+    } else {
+      if (lifeTotal1 != 40) {
+        lifeTotal1 = 40;
+        accumulatedDelta1 = 0;
+        drawAll();
+      }
     }
     inputDetected = true;
   }
 
-  // Touch handling
+  // Button B: Toggle mode
+  if (M5.BtnB.wasPressed()) {
+    twoPlayerMode = !twoPlayerMode;
+    accumulatedDelta1 = accumulatedDelta2 = 0;
+    M5.Display.fillScreen(BLACK);
+    drawAll();
+    inputDetected = true;
+  }
+
   auto touch = M5.Touch.getDetail();
   static bool touchActive = false;
   static unsigned long touchStartTime = 0;
@@ -102,24 +116,35 @@ void loop() {
     int buttonStripHeight = 35;
     int activeHeight = M5.Display.height() - buttonStripHeight;
 
+    int* life = &lifeTotal1;
+    int* delta = &accumulatedDelta1;
+    unsigned long* deltaTime = &lastDeltaUpdateTime1;
+    int touchSide = 0; // 0 for left/player1, 1 for right/player2
+
+    if (twoPlayerMode) {
+      if (touch.x > M5.Display.width() / 2) {
+        life = &lifeTotal2;
+        delta = &accumulatedDelta2;
+        deltaTime = &lastDeltaUpdateTime2;
+        touchSide = 1;
+      }
+    }
+
     if (heldTime >= 1000) {
       if (!longPressTriggered || (millis() - lastTouchTime > repeatInterval)) {
-        int prev = lifeTotal;
-        int delta = 0;
-
+        int prev = *life;
+        int d = 0;
         if (touch.y < activeHeight / 2) {
-          delta = min(5, MAX_LIFE - lifeTotal);
+          d = min(5, MAX_LIFE - *life);
         } else if (touch.y < activeHeight) {
-          delta = -min(5, lifeTotal - MIN_LIFE);
+          d = -min(5, *life - MIN_LIFE);
         }
 
-        if (delta != 0) {
-          lifeTotal += delta;
-          accumulatedDelta += delta;
-          lastDeltaUpdateTime = millis();
-          drawLife();
-          drawDelta(accumulatedDelta);
-          drawBattery();
+        if (d != 0) {
+          *life += d;
+          *delta += d;
+          *deltaTime = millis();
+          drawAll();
         }
 
         lastTouchTime = millis();
@@ -127,51 +152,60 @@ void loop() {
         inputDetected = true;
       }
     }
-
   } else if (touchActive) {
-    // Touch released before long press threshold → short press
+    // Short press
     if (!longPressTriggered) {
-      int prev = lifeTotal;
-      int delta = 0;
+      int* life = &lifeTotal1;
+      int* delta = &accumulatedDelta1;
+      unsigned long* deltaTime = &lastDeltaUpdateTime1;
+
+      if (twoPlayerMode && touch.x > M5.Display.width() / 2) {
+        life = &lifeTotal2;
+        delta = &accumulatedDelta2;
+        deltaTime = &lastDeltaUpdateTime2;
+      }
+
+      int prev = *life;
+      int d = 0;
       int buttonStripHeight = 35;
       int activeHeight = M5.Display.height() - buttonStripHeight;
 
       if (touch.y < activeHeight / 2) {
-        delta = min(1, MAX_LIFE - lifeTotal);
+        d = min(1, MAX_LIFE - *life);
       } else if (touch.y < activeHeight) {
-        delta = -min(1, lifeTotal - MIN_LIFE);
+        d = -min(1, *life - MIN_LIFE);
       }
 
-      if (delta != 0) {
-        lifeTotal += delta;
-        accumulatedDelta += delta;
-        lastDeltaUpdateTime = millis();
-        drawLife();
-        drawDelta(accumulatedDelta);
-        drawBattery();
+      if (d != 0) {
+        *life += d;
+        *delta += d;
+        *deltaTime = millis();
+        drawAll();
+        inputDetected = true;
       }
-
-      inputDetected = true;
     }
 
-    // Reset touch state
     touchActive = false;
   }
 
-  // Clear delta display after timeout
-  if (accumulatedDelta != 0 && (millis() - lastDeltaUpdateTime > deltaTimeout)) {
-    clearDeltaDisplay();
-    accumulatedDelta = 0;
+  // Delta timeout
+  if (accumulatedDelta1 != 0 && millis() - lastDeltaUpdateTime1 > deltaTimeout) {
+    accumulatedDelta1 = 0;
+    drawAll();
+  }
+  if (accumulatedDelta2 != 0 && millis() - lastDeltaUpdateTime2 > deltaTimeout) {
+    accumulatedDelta2 = 0;
+    drawAll();
   }
 
-  // Brightness auto-dim
+  // Auto-dim
   if (inputDetected) {
     lastInputTime = millis();
     if (isDimmed) {
       setBrightness(BRIGHTNESS_FULL);
       isDimmed = false;
     }
-  } else if (!isDimmed && (millis() - lastInputTime > dimTimeout)) {
+  } else if (!isDimmed && millis() - lastInputTime > dimTimeout) {
     setBrightness(BRIGHTNESS_DIM);
     isDimmed = true;
   }
@@ -179,42 +213,60 @@ void loop() {
   delay(50);
 }
 
-void drawLife() {
-  M5.Display.fillRect(lifeX - 5, lifeY - 5, lifeWidth + 10, lifeHeight + 10, BLACK);
+// Drawing helpers
 
-  String text = String(lifeTotal);
+void drawAll() {
+  M5.Display.fillScreen(BLACK);
+
+  // Force battery redraw by resetting last cached values
+  lastBatteryPercent = -1;
+  lastCharging = !M5.Power.isCharging(); // Flip it so drawBattery() always redraws
+
+  if (twoPlayerMode) {
+    drawLife(lifeTotal1, 0, accumulatedDelta1);
+    drawLife(lifeTotal2, 1, accumulatedDelta2);
+    
+    // Draw vertical separator line
+    int centerX = M5.Display.width() / 2;
+    M5.Display.drawLine(centerX, 0, centerX, M5.Display.height(), WHITE);
+  } else {
+    drawLife(lifeTotal1, -1, accumulatedDelta1); // Full screen
+  }
+
+  drawBattery();
+}
+
+
+void drawLife(int value, int side, int delta) {
+  int x, w;
+  if (side == -1) {
+    x = (M5.Display.width() - lifeWidth) / 2;
+    w = lifeWidth;
+  } else {
+    w = M5.Display.width() / 2;
+    x = (side == 0) ? (w - lifeWidth) / 2 : w + (w - lifeWidth) / 2;
+  }
+
+  String text = String(value);
   int textW = text.length() * 6 * lifeTextSize;
-  int textX = lifeX + (lifeWidth - textW) / 2;
+  int textX = x + (lifeWidth - textW) / 2;
 
   M5.Display.setTextSize(lifeTextSize);
-  M5.Display.setTextColor(WHITE);
+  M5.Display.setTextColor(WHITE, BLACK);
   M5.Display.setCursor(textX, lifeY);
   M5.Display.print(text);
 
-  lastLifeTotal = lifeTotal;
-}
+  if (delta != 0) {
+    int dy = (delta > 0) ? (lifeY - deltaHeight - 20) : (lifeY + lifeHeight + 10);
+    String deltaStr = (delta > 0 ? "+" : "-") + String(abs(delta));
+    int dw = deltaStr.length() * 6 * deltaTextSize;
+    int dx = x + (lifeWidth - dw) / 2;
 
-void drawDelta(int delta) {
-  int yAbove = lifeY - deltaHeight - 20;
-  int yBelow = lifeY + lifeHeight + 10;
-
-  String deltaStr = (delta > 0 ? "+" : "-") + String(abs(delta));
-  int textW = deltaStr.length() * 6 * deltaTextSize;
-  int textX = deltaX + (deltaWidth - textW) / 2;
-
-  clearDeltaDisplay();
-
-  M5.Display.setTextSize(deltaTextSize);
-  M5.Display.setTextColor(WHITE, BLACK);
-  M5.Display.setCursor(textX, (delta > 0 ? yAbove : yBelow));
-  M5.Display.print(deltaStr);
-}
-
-void clearDeltaDisplay() {
-  int yAbove = lifeY - deltaHeight - 20;
-  int yBelow = lifeY + lifeHeight + 10;
-  M5.Display.fillRect(deltaX - 5, yAbove - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
-  M5.Display.fillRect(deltaX - 5, yBelow - 5, deltaWidth + 10, deltaHeight + 10, BLACK);
+    M5.Display.setTextSize(deltaTextSize);
+    M5.Display.setTextColor(WHITE, BLACK);
+    M5.Display.setCursor(dx, dy);
+    M5.Display.print(deltaStr);
+  }
 }
 
 void drawBattery() {
@@ -248,23 +300,8 @@ void drawBattery() {
 }
 
 int voltageToPercent(float voltage) {
-  if (voltage >= 4.20) return 100;
-  if (voltage >= 4.15) return 95;
-  if (voltage >= 4.10) return 90;
-  if (voltage >= 4.05) return 85;
-  if (voltage >= 4.00) return 80;
-  if (voltage >= 3.95) return 75;
-  if (voltage >= 3.90) return 70;
-  if (voltage >= 3.85) return 65;
-  if (voltage >= 3.80) return 60;
-  if (voltage >= 3.75) return 55;
-  if (voltage >= 3.70) return 50;
-  if (voltage >= 3.65) return 40;
-  if (voltage >= 3.60) return 30;
-  if (voltage >= 3.55) return 20;
-  if (voltage >= 3.50) return 10;
-  if (voltage >= 3.40) return 5;
-  return 0;
+  voltage = constrain(voltage, 3.0, 4.2);
+  return int(((voltage - 3.0) / (4.2 - 3.0)) * 100);
 }
 
 void setBrightness(int percent) {
