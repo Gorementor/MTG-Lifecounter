@@ -1,17 +1,19 @@
 # M5Core2 Life Counter
 
-A responsive, low-power life counter for tabletop games like Magic the Gathering, built for the M5Stack Core2.
+A responsive, low-power life counter for tabletop games like Magic: The Gathering, built for the M5Stack Core2.
 
 ## Features
 
-- Tap top or bottom of the screen to increment or decrement life.
-- Displays life total in large font.
-- Shows recent change (`+/-` delta) for 500ms after life change.
-- Dim screen to 30% brightness after 50 seconds of inactivity (for energy saving).
-- Battery status display with charging indicator.
-- Reset life to:
-  - **20** with Button A
-  - **40** with Button C
+- Tap **top** or **bottom** of the screen to adjust life:
+  - **Short tap (<1s)**: +/-1 life
+  - **Long press (≥1s)**: Repeats +/-5 life while held
+- Displays life total in a large, clear font.
+- Shows recent life change (`+/-` delta) for 500ms after each update.
+- Automatically dims screen after 5 seconds of inactivity to save power.
+- Displays battery percentage and charging status.
+- Quick reset:
+  - **Button A** resets life to **20**
+  - **Button C** resets life to **40**
 
 ## Hardware
 
@@ -19,27 +21,25 @@ A responsive, low-power life counter for tabletop games like Magic the Gathering
 
 ## Controls
 
-| Input        | Action                         |
-|--------------|--------------------------------|
-| Tap top half | +1 life                        |
-| Tap bottom   | -1 life                        |
-| Hold tap     | Repeats increment/decrement    |
-| Button A     | Reset to 20 life               |
-| Button C     | Reset to 40 life               |
+| Input              | Action                              |
+|-------------------|-------------------------------------|
+| Short tap (top)    | +1 life                             |
+| Short tap (bottom) | -1 life                             |
+| Long press (top)   | Repeats +5 life every 400ms         |
+| Long press (bottom)| Repeats -5 life every 400ms         |
+| Button A           | Reset to 20 life                    |
+| Button C           | Reset to 40 life                    |
 
 ## Setup
 
-1. Install the [M5Stack library](https://github.com/m5stack/M5Core2) in Arduino IDE.
-2. Upload the code to your M5Core2.
-3. Start tracking your life total with style.
+1. Install the [M5Unified library](https://github.com/m5stack/M5Unified) in the Arduino IDE.
+2. Upload the code to your M5Core2 using a compatible USB cable.
+3. Start playing — no more pen and paper needed!
 
 ## TODO
 
-- 2-player split screen mode
-- Long-press reset confirmation
-- Persistent settings (EEPROM)
+- 2-player split screen mode (toggle with Button B)
 
 ---
 
 Made with ❤️ for tabletop players.
-
