@@ -248,8 +248,23 @@ void drawBattery() {
 }
 
 int voltageToPercent(float voltage) {
-  voltage = constrain(voltage, 3.0, 4.2);
-  return int(((voltage - 3.0) / (4.2 - 3.0)) * 100);
+  if (voltage >= 4.20) return 100;
+  if (voltage >= 4.15) return 95;
+  if (voltage >= 4.10) return 90;
+  if (voltage >= 4.05) return 85;
+  if (voltage >= 4.00) return 80;
+  if (voltage >= 3.95) return 75;
+  if (voltage >= 3.90) return 70;
+  if (voltage >= 3.85) return 65;
+  if (voltage >= 3.80) return 60;
+  if (voltage >= 3.75) return 55;
+  if (voltage >= 3.70) return 50;
+  if (voltage >= 3.65) return 40;
+  if (voltage >= 3.60) return 30;
+  if (voltage >= 3.55) return 20;
+  if (voltage >= 3.50) return 10;
+  if (voltage >= 3.40) return 5;
+  return 0;
 }
 
 void setBrightness(int percent) {
