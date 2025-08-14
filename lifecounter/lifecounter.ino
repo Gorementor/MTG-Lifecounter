@@ -31,7 +31,7 @@ bool lastCharging = false;
 bool isDimmed = false;
 
 // Dimensions
-const int lifeTextSize = 6;
+const int lifeTextSize = 10;
 int lifeWidth, lifeHeight;
 int lifeY;
 int deltaX1, deltaX2;
