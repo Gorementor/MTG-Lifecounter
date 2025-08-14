@@ -270,7 +270,7 @@ void drawLife(int value, int side, int delta) {
 }
 
 void drawBattery() {
-  float voltage = M5.Power.getBatteryVoltage();
+  float  voltage = M5.Power.getBatteryVoltage() / 1000.0f; // mV -> V
   int percent = voltageToPercent(voltage);
   bool isCharging = M5.Power.isCharging();
 
@@ -299,9 +299,28 @@ void drawBattery() {
   lastCharging = isCharging;
 }
 
-int voltageToPercent(float voltage) {
-  voltage = constrain(voltage, 3.0, 4.2);
-  return int(((voltage - 3.0) / (4.2 - 3.0)) * 100);
+int voltageToPercent(float  voltage) {
+  if (voltage >= 4.20) return 100;
+  if (voltage >= 4.15) return 95;
+  if (voltage >= 4.11) return 90;
+  if (voltage >= 4.08) return 85;
+  if (voltage >= 4.02) return 80;
+  if (voltage >= 3.98) return 75;
+  if (voltage >= 3.95) return 70;
+  if (voltage >= 3.91) return 65;
+  if (voltage >= 3.87) return 60;
+  if (voltage >= 3.85) return 55;
+  if (voltage >= 3.84) return 50;
+  if (voltage >= 3.82) return 45;
+  if (voltage >= 3.80) return 40;
+  if (voltage >= 3.79) return 35;
+  if (voltage >= 3.77) return 30;
+  if (voltage >= 3.75) return 25;
+  if (voltage >= 3.73) return 20;
+  if (voltage >= 3.71) return 15;
+  if (voltage >= 3.69) return 10;
+  if (voltage >= 3.61) return 5;
+  return 0;
 }
 
 void setBrightness(int percent) {
